@@ -1,7 +1,13 @@
 http = require 'http'
+auth = require 'http-auth'
 router = require './lib/router.coffee'
 
-server = http.createServer((req, res) ->
+basic = auth.basic {
+  realm: 'Enter username and password.',
+  file: './users.htpasswd'
+}
+
+server = http.createServer(basic, (req, res) ->
   router.route(req, res)
 ).on('error', (e) ->
   console.error 'Server Error', e
