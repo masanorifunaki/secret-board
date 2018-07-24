@@ -25,6 +25,7 @@ handle = (req, res) ->
           }
           res.end pug.renderFile './views/posts.pug', {
             posts: items
+            user: req.user
           }
           console.info "閲覧されました: user: #{req.user}
                         trackingId: #{cookies.get(trackingIdKey)}
@@ -58,6 +59,34 @@ handle = (req, res) ->
       util.handleBadRequest req, res
       break
 
+handleDelete = (req, res) ->
+  switch req.method
+    when 'POST'
+      body = []
+      req.on('data', (chunk) ->
+        body.push(chunk)
+      ).on 'end', ->
+        body = Buffer.concat(body).toString()
+        decoded = decodeURIComponent body
+        id = decoded.split('_id=')[1]
+        MongoClient.connect URL, {useNewUrlParser: true}, (error, client) ->
+          db = client.db DATABSE
+          query = { _id : parseInt id }
+          collection = db.collection collectionName
+          collection
+            .deleteOne query, (err, obj) ->
+              throw err if err
+              console.log '1 document deleted'
+              client.close()
+              console.info "削除されました: user: #{req.user}\n
+                        remoteAddress: #{req.connection.remoteAddress}\n
+                        userAgent: #{req.headers['user-agent']}"
+              handleRedirectPosts req, res
+    else
+      util.handleBadRequest req, res
+      break
+
+
 addTrackingCookie = (cookies) ->
   if !cookies.get(trackingIdKey)
     trackingId = Math.floor Math.random() * Number.MAX_SAFE_INTEGER
@@ -72,4 +101,5 @@ handleRedirectPosts = (req, res) ->
 
 module.exports = {
   handle: handle
+  handleDelete: handleDelete
 }
