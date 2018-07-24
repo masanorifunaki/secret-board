@@ -16,9 +16,12 @@ handle = (req, res) ->
   addTrackingCookie cookies
   switch req.method
     when 'GET'
-      MongoClient.connect URL, {useNewUrlParser: true}, (error, client) ->
-        col = client.db(DATABSE).collection('Post')
-        col.find({}).sort({createdAt: -1}).toArray (err, items) ->
+      MongoClient.connect URL, {useNewUrlParser: true}, (err, client) ->
+        throw err if err
+        db = client.db(DATABSE)
+        collection = db.collection collectionName
+        collection.find({}).sort({createdAt: -1}).toArray (err, items) ->
+          throw err if err
           posts = items
           res.writeHead 200, {
             'Content-Type': 'text/html; charset=utf-8'
@@ -27,9 +30,10 @@ handle = (req, res) ->
             posts: items
             user: req.user
           }
-          console.info "閲覧されました: user: #{req.user}
-                        trackingId: #{cookies.get(trackingIdKey)}
-                        remoteAddress: #{req.connection.remoteAddress}
+          console.info "閲覧されました:\n
+                        user: #{req.user}\n
+                        trackingId: #{cookies.get(trackingIdKey)}\n
+                        remoteAddress: #{req.connection.remoteAddress}\n
                         userAgent: #{req.headers['user-agent']}"
           client.close()
     when 'POST'
