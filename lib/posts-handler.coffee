@@ -6,7 +6,7 @@ autoIncrement = require "mongodb-autoincrement"
 moment = require 'moment-timezone'
 URL = process.env.DATABASE_URL || "mongodb://localhost:27017/secret_board"
 collectionName = 'Post'
-DATABSE = 'secret_board'
+DATABSE = process.env.DATABSE || 'secret_board'
 util = require './handler-util'
 contents = []
 
