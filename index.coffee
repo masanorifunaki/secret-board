@@ -15,6 +15,6 @@ server = http.createServer(basic, (req, res) ->
   console.error 'Client Error', e
 )
 
-port = 8000
+port = process.env.PORT || 8000
 server.listen port, ->
   console.info "Listening on #{port}"
