@@ -1,3 +1,4 @@
+crypto = require 'crypto'
 pug = require 'pug'
 Cookies = require 'cookies'
 MongoClient = require("mongodb").MongoClient
@@ -13,7 +14,7 @@ trackingIdKey = 'tracking_id'
 
 handle = (req, res) ->
   cookies = new Cookies req, res
-  addTrackingCookie cookies
+  trackingId = addTrackingCookie cookies, req.user
   switch req.method
     when 'GET'
       MongoClient.connect URL, { useNewUrlParser: true }
@@ -39,7 +40,7 @@ handle = (req, res) ->
               }
               console.info "閲覧されました:\n
                             user: #{req.user}\n
-                            trackingId: #{cookies.get(trackingIdKey)}\n
+                            trackingId: #{trackingId}\n
                             remoteAddress: #{req.connection.remoteAddress}\n
                             userAgent: #{req.headers['user-agent']}"
     when 'POST'
@@ -63,7 +64,7 @@ handle = (req, res) ->
               query =
                 _id: autoIndex
                 content: content
-                trackingCookie: cookies.get trackingIdKey
+                trackingCookie: trackingId
                 postedBy: req.user
                 createdAt: new Date
 
@@ -109,12 +110,38 @@ handleDelete = (req, res) ->
       util.handleBadRequest req, res
       break
 
+# Cookieに含まれているトラッキングIDに異常がなければその値を返し、
+# 存在しない場合や異常なものである場合には、再度作成しCookieに付与してその値を返す
+# @param {Cookies} cookies
+# @param {String} userName
+# @return {String} トラッキングID
 
-addTrackingCookie = (cookies) ->
-  if !cookies.get(trackingIdKey)
-    trackingId = Math.floor Math.random() * Number.MAX_SAFE_INTEGER
+addTrackingCookie = (cookies, userName) ->
+  requestedTrackingId = cookies.get trackingIdKey
+  if isValidTrackingId requestedTrackingId, userName
+    return requestedTrackingId
+  else
+    originalId = parseInt crypto.randomBytes(8).toString('hex'), 16
     tomorrow = new Date new Date().getTime() + (1000 * 60 * 60 * 24)
+    trackingId = "#{originalId}_#{createValidHash(originalId, userName)}"
     cookies.set trackingIdKey, trackingId, { expires: tomorrow }
+    return trackingId
+
+isValidTrackingId = (trackingId, userName) ->
+  if !trackingId
+    return false
+
+  splitted = trackingId.split('_')
+  originalId = splitted[0]
+  requestedHash = splitted[1]
+  return createValidHash originalId, userName == requestedHash
+
+secretKey = '5a69bb55532235125986a0df24aca759f69bae045c7a66d6e2bc4652e3efb43da4'
+
+createValidHash = (originalId, userName) ->
+  sha1sum = crypto.createHash 'sha1'
+  sha1sum.update(originalId + userName + secretKey)
+  return sha1sum.digest 'hex'
 
 handleRedirectPosts = (req, res) ->
   res.writeHead 303, {

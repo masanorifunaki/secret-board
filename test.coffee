@@ -7,7 +7,7 @@ html = pug.renderFile './views/posts.pug',
     id: 1,
     content: '<script>alert(\'test\');</script>',
     postedBy: 'guest1',
-    trackingCookie: 1,
+    trackingCookie: '5923192338728767_2d8304240bf6b6f4e63c1efe96586ebf036f9260',
     createdAt: new Date(),
   }],
   user: 'guest1'

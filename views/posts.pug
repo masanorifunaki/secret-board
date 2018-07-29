@@ -27,7 +27,8 @@ html(lang="ja")
           if isPostedByAdmin
             span #{post._id} :管理人
           else
-            span #{post._id} ID:#{post.trackingCookie}
+            - var originalTrackingId = post.trackingCookie ? post.trackingCookie.split('_')[0] : ''
+            span #{post._id} ID:#{originalTrackingId}
         .card-body
           p(style="white-space:pre; overflow:auto;").card-text #{post.content}
         .card-footer
