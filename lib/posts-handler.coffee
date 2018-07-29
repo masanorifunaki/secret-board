@@ -12,6 +12,8 @@ contents = []
 
 trackingIdKey = 'tracking_id'
 
+oneTimeTokenMap = new Map # キーをユーザー名、値をトークンとする連想配列
+
 handle = (req, res) ->
   cookies = new Cookies req, res
   trackingId = addTrackingCookie cookies, req.user
@@ -31,12 +33,12 @@ handle = (req, res) ->
               posts.forEach (post) ->
                 post.content = post.content.replace(/\+/g, ' ')
                 post.formattedCreatedAt = moment(post.createdAt).tz('Asia/Tokyo').format('YYYY年MM月DD日 HH時mm分ss秒')
-              res.writeHead 200, {
-                'Content-Type': 'text/html; charset=utf-8'
-              }
+              oneTimeToken = crypto.randomBytes(8).toString 'hex'
+              oneTimeTokenMap.set req.user, oneTimeToken
               res.end pug.renderFile './views/posts.pug', {
                 posts: posts
                 user: req.user
+                oneTimeToken: oneTimeToken
               }
               console.info "閲覧されました:\n
                             user: #{req.user}\n
@@ -51,28 +53,34 @@ handle = (req, res) ->
 
         body = Buffer.concat(body).toString()
         decoded = decodeURIComponent body
-        content = decoded.split('content=')[1]
-        console.log "投稿されました: #{content}"
+        dataArray = decoded.split('&')
+        content = if dataArray[0] then dataArray[0].split('content=')[1] else ''
+        requestedOneTimeToken = if dataArray[1] then dataArray[1].split('oneTimeToken=')[1] else ''
 
         MongoClient.connect URL, {useNewUrlParser: true}
           .then (db, err) ->
             throw err if err
-            db = db.db DATABSE
-            autoIncrement.getNextSequence db, collectionName, (err, autoIndex) ->
-              throw err if err
+            if oneTimeTokenMap.get(req.user) == requestedOneTimeToken
+              console.info "投稿されました: #{content}"
+              db = db.db DATABSE
+              autoIncrement.getNextSequence db, collectionName, (err, autoIndex) ->
+                throw err if err
 
-              query =
-                _id: autoIndex
-                content: content
-                trackingCookie: trackingId
-                postedBy: req.user
-                createdAt: new Date
+                query =
+                  _id: autoIndex
+                  content: content
+                  trackingCookie: trackingId
+                  postedBy: req.user
+                  createdAt: new Date
 
-              collection = db.collection collectionName
-              collection
-                .insertOne query
-                .then ->
-                  handleRedirectPosts req, res
+                collection = db.collection collectionName
+                collection
+                  .insertOne query
+                  .then ->
+                    oneTimeTokenMap.delete req.user
+                    handleRedirectPosts req, res
+            else
+              util.handleBadRequest req, res
     else
       util.handleBadRequest req, res
       break
@@ -87,25 +95,31 @@ handleDelete = (req, res) ->
 
         body = Buffer.concat(body).toString()
         decoded = decodeURIComponent body
-        id = decoded.split('_id=')[1]
+        dataArray = decoded.split '&'
+        id = if dataArray[0] then dataArray[0].split('_id=')[1] else ''
+        requestedOneTimeToken = if dataArray[1] then dataArray[1].split('oneTimeToken=')[1] else ''
 
-        MongoClient.connect URL, {useNewUrlParser: true}
-          .then (db, err) ->
-            throw err if err
-            db = db.db DATABSE
+        if oneTimeTokenMap.get(req.user) == requestedOneTimeToken
+          MongoClient.connect URL, {useNewUrlParser: true}
+            .then (db, err) ->
+              throw err if err
+              db = db.db DATABSE
 
-            query =
-              _id: parseInt id
+              query =
+                _id: parseInt id
 
-            collection = db.collection collectionName
-            collection
-              .deleteOne query
-              .then ->
-                console.log '1 document deleted'
-                console.info "削除されました: user: #{req.user}\n
-                          remoteAddress: #{req.connection.remoteAddress}\n
-                          userAgent: #{req.headers['user-agent']}"
-                handleRedirectPosts req, res
+              collection = db.collection collectionName
+              collection
+                .deleteOne query
+                .then ->
+                  console.log '1 document deleted'
+                  console.info "削除されました: user: #{req.user}\n
+                            remoteAddress: #{req.connection.remoteAddress}\n
+                            userAgent: #{req.headers['user-agent']}"
+                  oneTimeTokenMap.delete req.user
+                  handleRedirectPosts req, res
+        else
+          util.handleBadRequest req, res
     else
       util.handleBadRequest req, res
       break
