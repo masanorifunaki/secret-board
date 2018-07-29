@@ -28,7 +28,7 @@ handle = (req, res) ->
             .then (data) ->
               posts = data
               posts.forEach (post) ->
-                post.content = post.content.replace(/\n/g, '<br>')
+                post.content = post.content.replace(/\+/g, ' ')
                 post.formattedCreatedAt = moment(post.createdAt).tz('Asia/Tokyo').format('YYYY年MM月DD日 HH時mm分ss秒')
               res.writeHead 200, {
                 'Content-Type': 'text/html; charset=utf-8'
