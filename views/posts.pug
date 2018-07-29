@@ -16,10 +16,17 @@ html(lang="ja")
     h2 投稿一覧
 
     each post in posts
-      h3 #{post._id} ID:#{post.trackingCookie}
-      p #{post.content}
+      - var isPostedByAdmin = (post.postedBy === 'admin')
+      if isPostedByAdmin
+        h3 #{post._id} :管理人
+      else
+        h3 #{post._id} ID:#{post.trackingCookie}
+      p!= post.content
       p 投稿日時: #{post.createdAt}
-      - var isDeletable = (user === post.postedBy)
+      - var isAdmin = (user === 'admin')
+      if isAdmin
+        p 投稿者: #{post.postedBy}
+      - var isDeletable = (user === post.postedBy || isAdmin)
       if isDeletable
         form(method="post", action="/posts?delete=1")
           input(type="hidden", name="_id", value=post._id)

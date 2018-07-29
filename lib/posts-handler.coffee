@@ -27,6 +27,8 @@ handle = (req, res) ->
             .toArray()
             .then (data) ->
               posts = data
+              posts.forEach (post) ->
+                post.content = post.content.replace(/\n/g, '<br>')
               res.writeHead 200, {
                 'Content-Type': 'text/html; charset=utf-8'
               }
