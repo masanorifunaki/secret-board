@@ -9,6 +9,8 @@ route = (req, res) ->
       postsHandler.handleDelete req, res
     when '/logout'
       util.handleLogout req, res
+    when '/favicon.ico'
+      util.handleFavicon req, res
     else
       util.handleNotFound req, res
       break

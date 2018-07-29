@@ -1,3 +1,5 @@
+fs = require 'fs'
+
 handleLogout = (req, res) ->
   res.writeHead(401, {
     'Content-Type': 'text/html; charset=utf-8'
@@ -19,9 +21,16 @@ handleBadRequest = (req, res) ->
   })
   res.end '未対応のメソッドです'
 
+handleFavicon = (req, res) ->
+  res.writeHead(200, {
+    'Content-Type': 'image/vnd.microsoft.icon'
+  })
+  favicon = fs.readFileSync './favicon.ico'
+  res.end favicon
 
 module.exports = {
   handleLogout: handleLogout,
   handleNotFound: handleNotFound,
-  handleBadRequest: handleBadRequest
+  handleBadRequest: handleBadRequest,
+  handleFavicon: handleFavicon
 }

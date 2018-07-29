@@ -15,6 +15,7 @@
     "moment-timezone": "^0.5.0",
     "mongodb": "^3.1.1",
     "mongodb-autoincrement": "^1.0.1",
+    "mongoose": "^5.2.5",
     "pug": "^2.0.0-rc.4"
   }
 }
